@@ -28,7 +28,7 @@ export async function buildOpReturnTxRaw(network: Network, userAddress: string, 
     });
 
     // TODO if need multi input?
-    const input= await buildInput(userBalanceUTXO[0], 0)
+    const input= await buildInput(userBalanceUTXO[0], userBalanceUTXO[0]["vout"])
     psbt.addInput(input);
     psbt.setInputSequence(0, 4294967293);
 
