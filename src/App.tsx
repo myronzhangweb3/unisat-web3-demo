@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./App.css";
 import { Button, Card, Input, Radio } from "antd";
+import {buildOpReturnTxRaw} from './buildTxRaw';
+import {bitcoin} from "bitcoinjs-lib/src/networks";
 
 function App() {
   const [unisatInstalled, setUnisatInstalled] = useState(false);
@@ -155,7 +157,7 @@ function App() {
                   value={network}
                 >
                   <Radio value={"livenet"}>livenet</Radio>
-                  <Radio value={"testnet"}>testnet</Radio>
+                  {/*<Radio value={"testnet"}>testnet</Radio>*/}
                 </Radio.Group>
               </div>
             </Card>
@@ -165,6 +167,7 @@ function App() {
             <PushTxCard />
             <PushPsbtCard />
             <SendBitcoin />
+            <SendBitcoinWithOpReturn />
           </div>
         ) : (
           <div>
@@ -325,7 +328,7 @@ function PushPsbtCard() {
 
 function SendBitcoin() {
   const [toAddress, setToAddress] = useState(
-    "tb1qmfla5j7cpdvmswtruldgvjvk87yrflrfsf6hh0"
+    "bc1ql6lm90pn7v2ptxqw68hwwqh3jk6xdqc4y4q05e"
   );
   const [satoshis, setSatoshis] = useState(1000);
   const [txid, setTxid] = useState("");
@@ -371,6 +374,94 @@ function SendBitcoin() {
         SendBitcoin
       </Button>
     </Card>
+  );
+}
+
+function SendBitcoinWithOpReturn() {
+  const [toAddress, setToAddress] = useState(
+    "bc1ql6lm90pn7v2ptxqw68hwwqh3jk6xdqc4y4q05e"
+  );
+  const [satoshis, setSatoshis] = useState(1000);
+  const [message, setMessage] = useState("53734cfFd47239435121eE27496d37C03E3aD561");
+  const [txRawData, settxRawData] = useState("");
+  const [txid, setTxid] = useState("");
+  return (
+      <Card size="small" title="Send Bitcoin With OP_RETURN" style={{width: 300, margin: 10}}>
+          <div style={{textAlign: "left", marginTop: 10}}>
+              <div style={{fontWeight: "bold"}}>Receiver Address:</div>
+              <Input
+                  defaultValue={toAddress}
+                  onChange={(e) => {
+                      setToAddress(e.target.value);
+                  }}
+              ></Input>
+          </div>
+
+          <div style={{textAlign: "left", marginTop: 10}}>
+              <div style={{fontWeight: "bold"}}>Amount: (satoshis)</div>
+              <Input
+                  defaultValue={satoshis}
+                  onChange={(e) => {
+                      setSatoshis(parseInt(e.target.value));
+                  }}
+              ></Input>
+          </div>
+          <div style={{textAlign: "left", marginTop: 10}}>
+              <div style={{fontWeight: "bold"}}>OP_RETURN Message:</div>
+              <Input
+                  defaultValue={"53734cfFd47239435121eE27496d37C03E3aD561"}
+                  onChange={(e) => {
+                      setMessage(e.target.value);
+                  }}
+              ></Input>
+          </div>
+          <div style={{textAlign: "left", marginTop: 10}}>
+              <div style={{fontWeight: "bold"}}>txRawData:</div>
+              <div style={{wordWrap: "break-word"}}>{txRawData}</div>
+          </div>
+          <Button
+              style={{marginTop: 10}}
+              onClick={async () => {
+                  try {
+                      const unisat = (window as any).unisat;
+                      const [address] = await unisat.getAccounts();
+                      const rawData = await buildOpReturnTxRaw(
+                          bitcoin,
+                          address,
+                          toAddress,
+                          satoshis,
+                          message,
+                          (window as any).unisat.signPsbt
+                      );
+                      settxRawData(rawData);
+                  } catch (e) {
+                      settxRawData((e as any).message);
+                  }
+              }}
+          >
+              BuildBitcoinWithOpReturn
+          </Button>
+          <div style={{textAlign: "left", marginTop: 10}}>
+              <div style={{fontWeight: "bold"}}>txid:</div>
+              <div style={{wordWrap: "break-word"}}>{txid}</div>
+          </div>
+          <Button
+              style={{marginTop: 10}}
+              onClick={async () => {
+                  try {
+                      const unisat = (window as any).unisat;
+                      console.log("txRawData:", txRawData)
+                      const txid = await unisat.pushTx(txRawData);
+                      setTxid(txid)
+                  } catch (e) {
+                      debugger
+                      setTxid((e as any).message);
+                  }
+              }}
+          >
+              SendBitcoinWithOpReturn
+          </Button>
+      </Card>
   );
 }
 
