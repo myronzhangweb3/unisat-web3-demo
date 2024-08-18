@@ -6,6 +6,7 @@ const bitcoinlib = require('./bitcoinjs-lib.js');
 
 export async function buildOpReturnTxRaw(network: Network, userAddress: string, toAddress: string, amountToSend: number, message: string, signPsbt: any) {
     // network = testnet;
+    // TODO only support main net
     network = bitcoin;
     console.log("network: ", network)
     console.log("userAddress: ", userAddress)
@@ -21,27 +22,21 @@ export async function buildOpReturnTxRaw(network: Network, userAddress: string, 
             address: userAddress,
         },
     });
-    console.log("userBalanceUTXO: ", userBalanceUTXO)
 
     const psbt = new bitcoinlib.Psbt({
         network,
     });
-    console.log("psbt.network:", psbt.network)
 
+    // TODO if need multi input?
     const input= await buildInput(userBalanceUTXO[0], 0)
-    console.log("input:", input)
     psbt.addInput(input);
-    console.log("addInput")
     psbt.setInputSequence(0, 4294967293);
-    console.log("setInputSequence")
 
     psbt.addOutput({
         address: toAddress,
         value: amountToSend
     });
-    console.log("addOutput")
 
-    console.log("message: ", message)
     const data: Buffer = Buffer.from(message, 'hex'); // 使用 buffer 包
     const opReturnOutput: Buffer = bitcoinlib.script.compile([
         bitcoinlib.opcodes.OP_RETURN,
@@ -52,6 +47,7 @@ export async function buildOpReturnTxRaw(network: Network, userAddress: string, 
         value: 0
     });
 
+    // TODO how to set fee?
     const fee: number = 1000;
     const totalInputValue: number = userBalanceUTXO[0].satoshis;
     const changeValue: number = totalInputValue - amountToSend - fee;
@@ -64,7 +60,6 @@ export async function buildOpReturnTxRaw(network: Network, userAddress: string, 
             value: changeValue // 修正找零值
         });
     }
-    console.log("addOutput")
 
     const signHex = await signPsbt(psbt.toBuffer().toString("hex"), {
         autoFinalized: false,
@@ -75,10 +70,8 @@ export async function buildOpReturnTxRaw(network: Network, userAddress: string, 
     console.log("signHex:", signHex)
 
     const psbt2 = bitcoinlib.Psbt.fromHex(signHex, {network});
-    console.log("psbt2")
     psbt2.finalizeAllInputs();
 
-    console.log("finalizeAllInputs success")
     const tx = psbt2.extractTransaction();
     return tx.toHex();
 }
